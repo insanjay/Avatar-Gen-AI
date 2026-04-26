@@ -1,0 +1,7 @@
+streamlit
+python-dotenv
+groq
+pyttsx3
+PyPDF2
+PyMuPDF
+openai-whisper
