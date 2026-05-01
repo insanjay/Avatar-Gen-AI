@@ -25,3 +25,5 @@ wheels/
 .installed.cfg
 *.egg
 .env
+app.py
+studio.py

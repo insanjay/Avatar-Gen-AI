@@ -1,3 +1,4 @@
+import whisper
 import fitz
 import os
 import tempfile
@@ -5,6 +6,10 @@ from context_builder import build_context
 from llm_service import generate_script
 from tts_service import generate_audio
 from video_service import generate_video
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
 
 
 # -------- PDF PROCESSING FUNCTION --------
@@ -43,7 +48,6 @@ def run_pipeline(text, pdf_bytes, audio_bytes, image_bytes):
     audio_text = ""
     if audio_bytes:
         try:
-            import whisper
             model = whisper.load_model("base")
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
@@ -77,8 +81,9 @@ def run_pipeline(text, pdf_bytes, audio_bytes, image_bytes):
     script = script.strip()[:150]
 
     # -------- TTS --------
-    audio_path = os.path.abspath("pipeline_audio.wav")
-    audio_path = generate_audio(script, audio_path)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    audio_path = OUTPUT_DIR / "pipeline_audio.wav"
+    audio_path = generate_audio(script, str(audio_path))
 
     if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
         raise Exception("Audio generation failed")
@@ -92,3 +97,6 @@ def run_pipeline(text, pdf_bytes, audio_bytes, image_bytes):
     video_path = generate_video(audio_path, image_path)
 
     return video_path
+
+
+#  %cd /content/Avatar-Gen-AI

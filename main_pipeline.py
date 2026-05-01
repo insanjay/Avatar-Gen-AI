@@ -16,6 +16,12 @@ from llm_service import generate_script
 from tts_service import generate_audio, clean_llm_output
 from video_service import generate_video
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
+SADTALKER_EXAMPLES_DIR = PROJECT_ROOT / "SadTalker" / "examples"
+
 
 def generate_full_video(text: str, audio: str, pdf: str, image_path: str, 
                        instruction: str = "Generate a 20–30 second spoken script (60–100 words), concise and clear.") -> str:
@@ -106,8 +112,11 @@ def generate_full_video(text: str, audio: str, pdf: str, image_path: str,
         print(f"  - Script cleaned for TTS")
         
         # Generate unique audio filename
-        audio_filename = f"pipeline_audio_{int(time.time())}.wav"
-        audio_path = os.path.abspath(generate_audio(cleaned_script, audio_filename))
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        audio_filename = OUTPUT_DIR / f"pipeline_audio_{int(time.time())}.wav"
+        audio_path = generate_audio(cleaned_script, str(audio_filename))
+
+
         print(f"  - Audio generated: {audio_path}")
     except Exception as e:
         raise Exception(f"Failed to generate audio: {str(e)}")
@@ -210,12 +219,14 @@ def generate_full_video_with_config(text: str, audio: str, pdf: str, image_path:
         print("\n[STEP 4/5] Generating audio...")
         
         try:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
             if audio_filename is None:
                 timestamp = int(time.time())
-                audio_filename = f"pipeline_audio_{timestamp}.wav"
+                audio_filename = OUTPUT_DIR / f"pipeline_audio_{timestamp}.wav"
             
             cleaned_script = clean_llm_output(script)
-            audio_path = generate_audio(cleaned_script, audio_filename)
+            audio_path = generate_audio(cleaned_script, str(audio_filename))
             pipeline_info["steps_completed"].append("audio_generation")
             pipeline_info["files_created"].append(audio_path)
             print(f"  - Audio generated: {audio_path}")
@@ -268,7 +279,7 @@ if __name__ == "__main__":
         test_text = "Artificial intelligence is revolutionizing how we interact with technology."
         test_audio = "Machine learning algorithms enable computers to learn from data and make intelligent decisions."
         test_pdf = "Deep learning neural networks have transformed fields like computer vision and natural language processing."
-        test_image = os.path.abspath("SadTalker\\examples\\source_image.jpg")
+        test_image = ostr(SADTALKER_EXAMPLES_DIR / "source_image" / "full_body_1.png")
         
         # Check if test image exists
         if not os.path.exists(test_image):

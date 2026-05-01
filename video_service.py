@@ -2,6 +2,11 @@ import os
 import subprocess
 import sys
 import glob
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+SADTALKER_DIR=PROJECT_ROOT / "SadTalker"
+SADTALKER_RESULTS_DIR = SADTALKER_DIR / "results"
 
 
 def generate_video(audio_path, image_path):
@@ -10,7 +15,7 @@ def generate_video(audio_path, image_path):
         sys.executable, "inference.py",
         "--driven_audio", audio_path,
         "--source_image", image_path,
-        "--result_dir", "results",
+        "--result_dir", str(SADTALKER_RESULTS_DIR),
         "--still",
         "--preprocess", "crop",
         "--expression_scale", "1.2",
@@ -22,7 +27,7 @@ def generate_video(audio_path, image_path):
 
     process = subprocess.Popen(
         cmd,
-        cwd="SadTalker",
+        cwd="str(SadTalker)",
         stdout=sys.stdout,
         stderr=sys.stderr
     )
@@ -61,7 +66,7 @@ def fix_video_codec(input_path):
 
 
 def get_final_video():
-    videos = glob.glob("SadTalker/results/**/*.mp4", recursive=True)
+    videos = glob.glob(str(SADTALKER_RESULTS_DIR / "**" / "*.mp4") recursive=True)
 
     final = [
         v for v in videos
