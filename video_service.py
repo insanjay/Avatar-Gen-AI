@@ -6,6 +6,9 @@ import glob
 
 def generate_video(audio_path, image_path):
 
+    # Absolute SadTalker path (CRITICAL FIX)
+    sadtalker_path = os.path.abspath("SadTalker")
+
     cmd = [
         sys.executable, "inference.py",
         "--driven_audio", audio_path,
@@ -20,22 +23,29 @@ def generate_video(audio_path, image_path):
 
     print("Running SadTalker...")
 
-    process = subprocess.Popen(
+    # 🔍 DEBUG (very important)
+    print("CWD:", sadtalker_path)
+    print("Checkpoint exists:",
+          os.path.exists(os.path.join(sadtalker_path, "checkpoints/epoch_20.pth")))
+
+    # ✅ Run process with proper cwd + output capture
+    process = subprocess.run(
         cmd,
-        cwd="SadTalker",
-        stdout=sys.stdout,
-        stderr=sys.stderr
+        cwd=sadtalker_path,
+        capture_output=True,
+        text=True
     )
 
-    process.wait()
+    print("\n===== STDOUT =====\n", process.stdout)
+    print("\n===== STDERR =====\n", process.stderr)
 
     if process.returncode != 0:
         raise Exception("SadTalker failed")
 
-    # ✅ Step 1: get final video
-    video_path = get_final_video()
+    # ✅ Get final video
+    video_path = get_final_video(sadtalker_path)
 
-    # ✅ Step 2: fix codec (CRITICAL)
+    # ✅ Fix codec
     video_path = fix_video_codec(video_path)
 
     return video_path
@@ -60,8 +70,10 @@ def fix_video_codec(input_path):
     return output_path
 
 
-def get_final_video():
-    videos = glob.glob("SadTalker/results/**/*.mp4", recursive=True)
+def get_final_video(sadtalker_path):
+    search_path = os.path.join(sadtalker_path, "results/**/*.mp4")
+
+    videos = glob.glob(search_path, recursive=True)
 
     final = [
         v for v in videos
