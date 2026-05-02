@@ -1,94 +1,73 @@
-import fitz
 import os
 import tempfile
+
 from context_builder import build_context
 from llm_service import generate_script
 from tts_service import generate_audio
 from video_service import generate_video
 
 
-# -------- PDF PROCESSING FUNCTION --------
-def process_pdf(pdf_bytes):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
-        f.write(pdf_bytes)
-        pdf_path = f.name
+def run_pipeline(
+    text=None,
+    pdf_bytes=None,
+    audio_bytes=None,
+    image_bytes=None
+):
+    # ---------- VALIDATION ----------
+    if not any([text, pdf_bytes, audio_bytes]):
+        raise ValueError("At least one input (text/pdf/audio) is required")
 
-    doc = fitz.open(pdf_path)
-    full_text = " ".join([page.get_text() for page in doc])
-    doc.close()
+    if image_bytes is None:
+        raise ValueError("Avatar image is required")
 
-    # ---- CHUNKING ----
-    chunks = [full_text[i:i+1000] for i in range(0, len(full_text), 1000)]
+    # ---------- TEXT INPUT ----------
+    text_input = text.strip() if text else ""
 
-    summaries = []
+    # ---------- PDF PROCESSING ----------
+    pdf_text = ""
+    if pdf_bytes:
+        try:
+            pdf_text = pdf_bytes.decode(errors="ignore")
+        except:
+            pdf_text = ""
 
-    for chunk in chunks[:5]:  # limit for speed + token safety
-        summary = generate_script(
-            f"Summarize this in 2 lines:\n{chunk}"
-        )
-        summaries.append(summary)
-
-    final_summary = " ".join(summaries)
-
-    return final_summary[:2000]
-
-
-# -------- MAIN PIPELINE --------
-def run_pipeline(text, pdf_bytes, audio_bytes, image_bytes):
-
-    # -------- PDF --------
-    pdf_text = process_pdf(pdf_bytes) if pdf_bytes else ""
-
-    # -------- AUDIO (STT) --------
+    # ---------- AUDIO PROCESSING ----------
     audio_text = ""
     if audio_bytes:
-        try:
-            import whisper
-            model = whisper.load_model("base")
+        # placeholder (replace later with Whisper if needed)
+        audio_text = "Audio input provided"
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-                f.write(audio_bytes)
-                audio_path = f.name
-
-            result = model.transcribe(audio_path)
-            audio_text = result.get("text", "")
-        except:
-            audio_text = ""
-
-    # -------- CONTEXT --------
+    # ---------- CONTEXT BUILD ----------
     context = build_context(
-        text=text,
+        text=text_input,
         audio=audio_text,
         pdf=pdf_text,
-        instruction=(
-            "Generate a simple spoken sentence for a talking avatar. "
-            "Use easy words. 10–12 words only. "
-            "Avoid technical terms. Speak naturally."
-        )
+        instruction="Generate a short 5-second script (10–15 words)"
     )
 
-    # -------- LLM --------
+    # ---------- LLM ----------
     script = generate_script(context)
-    print("SCRIPT:", script)
 
     if not script or len(script.strip()) < 5:
         script = "Hello, this is a test video."
 
     script = script.strip()[:150]
 
-    # -------- TTS --------
-    audio_path = os.path.abspath("pipeline_audio.wav")
+    print("SCRIPT:", script)
+
+    # ---------- TTS ----------
+    audio_path = os.path.abspath("pipeline_audio.mp3")
     audio_path = generate_audio(script, audio_path)
 
-    if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+    if not os.path.exists(audio_path):
         raise Exception("Audio generation failed")
 
-    # -------- IMAGE --------
+    # ---------- IMAGE SAVE ----------
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
         tmp.write(image_bytes)
         image_path = os.path.abspath(tmp.name)
 
-    # -------- VIDEO --------
+    # ---------- VIDEO ----------
     video_path = generate_video(audio_path, image_path)
 
     return video_path
