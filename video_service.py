@@ -6,52 +6,74 @@ import glob
 
 def generate_video(audio_path, image_path):
 
-    # Absolute SadTalker path (CRITICAL FIX)
+    # Absolute SadTalker path
     sadtalker_path = os.path.abspath("SadTalker")
 
     cmd = [
-        sys.executable, "inference.py",
+        sys.executable,
+        "inference.py",
+
         "--driven_audio", audio_path,
         "--source_image", image_path,
+
         "--result_dir", "results",
+
         "--still",
+
         "--preprocess", "crop",
+
+        "--size", "256",
+
         "--expression_scale", "1.2",
-        "--enhancer", "gfpgan",
+
         "--pose_style", "0",
+
+        "--checkpoint_dir", "checkpoints"
     ]
 
     print("Running SadTalker...")
 
-    # 🔍 DEBUG (very important)
-    print("CWD:", sadtalker_path)
-    print("Checkpoint exists:",
-          os.path.exists(os.path.join(sadtalker_path, "checkpoints/epoch_20.pth")))
-
-    # ✅ Run process with proper cwd + output capture
-    process = subprocess.run(
-        cmd,
-        cwd=sadtalker_path,
-        capture_output=True,
-        text=True
+    # DEBUG
+    safetensor_path = os.path.join(
+        sadtalker_path,
+        "checkpoints",
+        "SadTalker_V0.0.2_512.safetensors"
     )
 
-    print("\n===== STDOUT =====\n", process.stdout)
-    print("\n===== STDERR =====\n", process.stderr)
+    print("CWD:", sadtalker_path)
+
+    print(
+        "Safetensor exists:",
+        os.path.exists(safetensor_path)
+    )
+
+    process = subprocess.Popen(
+        cmd,
+        cwd=sadtalker_path,
+    )
+
+    process.wait()
+
+    print("\n===== STDOUT =====\n")
+    print(process.stdout)
+
+    print("\n===== STDERR =====\n")
+    print(process.stderr)
 
     if process.returncode != 0:
         raise Exception("SadTalker failed")
 
-    # ✅ Get final video
+    # Get final video
     video_path = get_final_video(sadtalker_path)
 
-    # ✅ Fix codec
+    # Fix codec
     video_path = fix_video_codec(video_path)
 
     return video_path
 
 
 def fix_video_codec(input_path):
+
     output_path = input_path.replace(".mp4", "_fixed.mp4")
 
     cmd = [
@@ -63,7 +85,11 @@ def fix_video_codec(input_path):
         output_path
     ]
 
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
 
     print("FIXED VIDEO:", output_path)
 
@@ -71,9 +97,16 @@ def fix_video_codec(input_path):
 
 
 def get_final_video(sadtalker_path):
-    search_path = os.path.join(sadtalker_path, "results/**/*.mp4")
 
-    videos = glob.glob(search_path, recursive=True)
+    search_path = os.path.join(
+        sadtalker_path,
+        "results/**/*.mp4"
+    )
+
+    videos = glob.glob(
+        search_path,
+        recursive=True
+    )
 
     final = [
         v for v in videos
