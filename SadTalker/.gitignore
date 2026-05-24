@@ -160,15 +160,11 @@ cython_debug/
 .idea/
 
 examples/results/*
-gfpgan/*
-checkpoints/*
 assets/*
 results/*
 Dockerfile
 start_docker.sh
 start.sh
-
-checkpoints
 
 # Mac
 .DS_Store
